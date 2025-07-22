@@ -316,10 +316,10 @@ def load_models_and_confusion_matrices():
         avg_accuracy = np.mean(list(accuracies.values())) * 100
 
         
-        return models, confusion_matrices, roc_data
+        return models, confusion_matrices, roc_data, accuracies, losses
     except Exception as e:
         st.error(f"❌ Error loading models or confusion matrices: {str(e)}")
-        return None, None, None
+        return None, None, None, None, None
     
 
 # Función para calcular el coeficiente de Matthews
@@ -788,11 +788,11 @@ def main():
     st.title(t('title'))
     st.markdown(t('description'))
     
-    # Cargar modelos
-    models, confusion_matrices, roc_data = load_models_and_confusion_matrices()
+    # Cargar modelos y métricas
+    models, confusion_matrices, roc_data, accuracies, losses = load_models_and_confusion_matrices()
     
     # Calcular métricas estadísticas
-    if models and confusion_matrices:
+    if models and confusion_matrices and accuracies and losses:
         mcc_results = {}
         for model_name, conf_matrix in confusion_matrices.items():
             mcc_results[model_name] = calculate_mcc(conf_matrix)
@@ -814,7 +814,7 @@ def main():
             image = Image.open(uploaded_file)
             st.image(image, caption=t('uploaded_image'), use_column_width=True)
 
-            if models and confusion_matrices and roc_data:
+            if models and confusion_matrices and roc_data and accuracies and losses:
                 model_name = st.selectbox(t('model_select'), list(models.keys()))
                 model = models[model_name]
 
