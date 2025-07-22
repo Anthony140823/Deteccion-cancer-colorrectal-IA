@@ -215,10 +215,17 @@ def calculate_roc_from_confusion_matrix(conf_matrix, class_names):
 def load_models_and_confusion_matrices():
     try:
         # Definir la ruta al conjunto de validación
-        validation_dir = "..\\..\\..\\CRC-VAL-HE-20"
-        if not os.path.exists(validation_dir):
-            st.error("❌ No se encuentra el directorio de validación")
-            return None, None, None
+        validation_dir = os.path.join(os.path.dirname(__file__), "validation_data", "CRC-VAL-HE-20")
+        # Ruta alternativa si no existe
+        alt_validation_dir = "..\\..\\..\\CRC-VAL-HE-20"
+        
+        if os.path.exists(validation_dir):
+            validation_dir = validation_dir
+        elif os.path.exists(alt_validation_dir):
+            validation_dir = alt_validation_dir
+        else:
+            st.warning("⚠️ No se encuentra el directorio de validación. Usando matrices de confusión predefinidas.")
+            return load_mock_data()
 
         # Cargar modelos
         models = {
@@ -810,6 +817,11 @@ def main():
     )
 
     if uploaded_file is not None:
+        # Validar tamaño del archivo (máximo 10MB)
+        if uploaded_file.size > 10 * 1024 * 1024:
+            st.error("❌ El archivo es demasiado grande. Máximo 10MB permitido.")
+            return
+            
         try:
             image = Image.open(uploaded_file)
             st.image(image, caption=t('uploaded_image'), use_column_width=True)
@@ -823,7 +835,7 @@ def main():
                         processed_image = preprocess_image(image, model_name=model_name)
 
                         if processed_image is not None:
-                            if model_name in ['RaeaesNet50V2']:
+                            if model_name == 'ResNet50V2':
                                 outputs = model(processed_image, training=False)
                                 prediction = list(outputs.values())[0].numpy() if isinstance(outputs, dict) else outputs.numpy()
                             else:
