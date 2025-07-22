@@ -7,7 +7,8 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import pandas as pd
 from tensorflow import keras
-from sklearn.metrics import confusion_matrix, matthews_corrcoef
+from sklearn.metrics import confusion_matrix, matthews_corrcoef, roc_curve, auc
+from sklearn.preprocessing import label_binarize
 from scipy.stats import chi2
 import seaborn as sns
 from fpdf import FPDF
@@ -127,6 +128,86 @@ translator = TranslationService()
 # Clases (ahora se manejan a través del sistema de traducción)
 CLASS_NAMES = ['ADI', 'BACK', 'DEB', 'LYM', 'MUC', 'MUS', 'NORM', 'STR', 'TUM']
 
+# Función para calcular datos ROC reales a partir de matrices de confusión
+def calculate_roc_from_confusion_matrix(conf_matrix, class_names):
+    """
+    Calcula los datos ROC (FPR, TPR, AUC) a partir de una matriz de confusión multiclase.
+    Utiliza el método macro-average para combinar las curvas ROC de todas las clases.
+    """
+    try:
+        n_classes = len(class_names)
+        conf_matrix = np.array(conf_matrix)
+        
+        # Reconstruir y_true y y_pred a partir de la matriz de confusión
+        y_true = []
+        y_pred = []
+        
+        for true_class in range(n_classes):
+            for pred_class in range(n_classes):
+                count = conf_matrix[true_class, pred_class]
+                y_true.extend([true_class] * count)
+                y_pred.extend([pred_class] * count)
+        
+        y_true = np.array(y_true)
+        y_pred = np.array(y_pred)
+        
+        # Binarizar las etiquetas para el cálculo de ROC multiclase
+        y_true_bin = label_binarize(y_true, classes=range(n_classes))
+        y_pred_bin = label_binarize(y_pred, classes=range(n_classes))
+        
+        # Calcular FPR, TPR y AUC para cada clase
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+        
+        for i in range(n_classes):
+            if len(np.unique(y_true_bin[:, i])) > 1:  # Solo si hay ambas clases (0 y 1)
+                fpr[i], tpr[i], _ = roc_curve(y_true_bin[:, i], y_pred_bin[:, i])
+                roc_auc[i] = auc(fpr[i], tpr[i])
+            else:
+                # Si solo hay una clase, crear datos por defecto
+                fpr[i] = np.array([0, 1])
+                tpr[i] = np.array([0, 0])
+                roc_auc[i] = 0.5
+        
+        # Calcular la curva ROC macro-average
+        # Interpolar todas las curvas en un grid común
+        mean_fpr = np.linspace(0, 1, 100)
+        
+        # Interpolar TPR para cada clase
+        interp_tpr = []
+        valid_aucs = []
+        
+        for i in range(n_classes):
+            if len(fpr[i]) > 1:
+                interp_tpr.append(np.interp(mean_fpr, fpr[i], tpr[i]))
+                interp_tpr[-1][0] = 0.0  # Asegurar que empiece en (0,0)
+                valid_aucs.append(roc_auc[i])
+        
+        # Calcular la media de los TPR interpolados
+        if interp_tpr:
+            mean_tpr = np.mean(interp_tpr, axis=0)
+            mean_tpr[-1] = 1.0  # Asegurar que termine en (1,1)
+            macro_auc = np.mean(valid_aucs)
+        else:
+            mean_tpr = np.linspace(0, 1, 100)
+            macro_auc = 0.5
+        
+        return {
+            'fpr': mean_fpr,
+            'tpr': mean_tpr,
+            'auc': macro_auc
+        }
+        
+    except Exception as e:
+        st.error(f"Error calculando ROC: {str(e)}")
+        # Retornar datos por defecto en caso de error
+        return {
+            'fpr': np.linspace(0, 1, 100),
+            'tpr': np.linspace(0, 1, 100),
+            'auc': 0.5
+        }
+
 # Cargar modelos y matrices de confusión
 @st.cache_resource
 def load_models_and_confusion_matrices():
@@ -195,34 +276,10 @@ def load_models_and_confusion_matrices():
                                         [15, 15, 15, 15, 15, 15, 15, 15, 20]])
         }
         
-        # Datos de curvas ROC y AUC precalculados para cada modelo
-        roc_data = {
-            'CNN Simple': {
-                'fpr': np.linspace(0, 1, 100),
-                'tpr': np.linspace(0, 1, 100)**0.65,  # curva decente
-                'auc': 0.85
-            },
-            'ResNet50V2': {
-                'fpr': np.linspace(0, 1, 100),
-                'tpr': np.linspace(0, 1, 100)**0.6,  # mejor que la anterior
-                'auc': 0.87
-            },
-            'MobileNetV2 Base': {
-                'fpr': np.linspace(0, 1, 100),
-                'tpr': np.linspace(0, 1, 100)**0.4,  # la mejor curva (más arriba)
-                'auc': 0.96
-            },
-            'Hybrid Attention': {
-                'fpr': np.linspace(0, 1, 100),
-                'tpr': np.linspace(0, 1, 100)**1.2,  # más cercana a la diagonal
-                'auc': 0.65
-            },
-            'Hybrid Autoencoder': {
-                'fpr': np.linspace(0, 1, 100),
-                'tpr': np.linspace(0, 1, 100)**1.1,  # ligeramente mejor que Attention
-                'auc': 0.68
-            }
-        }
+        # Calcular datos ROC reales a partir de las matrices de confusión
+        roc_data = {}
+        for model_name, conf_matrix in confusion_matrices.items():
+            roc_data[model_name] = calculate_roc_from_confusion_matrix(conf_matrix, CLASS_NAMES)
 
         
         return models, confusion_matrices, roc_data
@@ -776,12 +833,12 @@ def main():
                             
                             fig2, ax2 = plt.subplots(figsize=(10, 8))
                             sns.heatmap(confusion_matrices[model_name], 
-                                       annot=True, 
-                                       fmt='d', 
-                                       cmap='Blues',
-                                       xticklabels=CLASS_NAMES,
-                                       yticklabels=CLASS_NAMES,
-                                       ax=ax2)
+                                        annot=True, 
+                                        fmt='d', 
+                                        cmap='Blues',
+                                        xticklabels=CLASS_NAMES,
+                                        yticklabels=CLASS_NAMES,
+                                        ax=ax2)
                             ax2.set_xlabel(t('prediction'))
                             ax2.set_ylabel(t('actual'))
                             ax2.set_title(f"{t('confusion_matrix')} - {model_name}")
