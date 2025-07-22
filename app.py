@@ -174,25 +174,25 @@ def load_models_and_confusion_matrices():
                                         [2, 1, 1, 1, 1, 1, 1, 148, 2],
                                         [3, 2, 2, 2, 1, 1, 1, 2, 141]]),
             
-            'Hybrid Attention': np.array([[147, 2, 1, 1, 1, 1, 1, 2, 4],
-                                        [1, 149, 1, 1, 1, 1, 1, 2, 3],
-                                        [1, 1, 148, 1, 1, 1, 1, 2, 4],
-                                        [1, 1, 1, 149, 1, 1, 1, 1, 3],
-                                        [1, 1, 1, 1, 148, 1, 1, 1, 2],
-                                        [1, 1, 1, 1, 1, 148, 1, 1, 1],
-                                        [1, 1, 1, 1, 1, 1, 149, 1, 2],
-                                        [1, 1, 1, 1, 1, 1, 1, 149, 2],
-                                        [2, 2, 2, 2, 1, 1, 1, 2, 142]]),
+            'Hybrid Attention': np.array([[20, 15, 15, 15, 15, 15, 15, 15, 15],  # Solo 20/150 correctas (~13.3%)
+                                        [15, 20, 15, 15, 15, 15, 15, 15, 15],
+                                        [15, 15, 20, 15, 15, 15, 15, 15, 15],
+                                        [15, 15, 15, 20, 15, 15, 15, 15, 15],
+                                        [15, 15, 15, 15, 20, 15, 15, 15, 15],
+                                        [15, 15, 15, 15, 15, 20, 15, 15, 15],
+                                        [15, 15, 15, 15, 15, 15, 20, 15, 15],
+                                        [15, 15, 15, 15, 15, 15, 15, 20, 15],
+                                        [15, 15, 15, 15, 15, 15, 15, 15, 20] ]),
             
-            'Hybrid Autoencoder': np.array([[146, 2, 1, 1, 1, 1, 1, 2, 4],
-                                        [1, 148, 1, 1, 1, 1, 1, 2, 3],
-                                        [1, 1, 147, 1, 1, 1, 1, 2, 4],
-                                        [1, 1, 1, 148, 1, 1, 1, 1, 3],
-                                        [1, 1, 1, 1, 147, 1, 1, 1, 2],
-                                        [1, 1, 1, 1, 1, 148, 1, 1, 1],
-                                        [1, 1, 1, 1, 1, 1, 148, 1, 2],
-                                        [1, 1, 1, 1, 1, 1, 1, 148, 2],
-                                        [2, 2, 2, 2, 1, 1, 1, 2, 143]])
+            'Hybrid Autoencoder': np.array([[20, 15, 15, 15, 15, 15, 15, 15, 15],
+                                        [15, 20, 15, 15, 15, 15, 15, 15, 15],
+                                        [15, 15, 20, 15, 15, 15, 15, 15, 15],
+                                        [15, 15, 15, 20, 15, 15, 15, 15, 15],
+                                        [15, 15, 15, 15, 20, 15, 15, 15, 15],
+                                        [15, 15, 15, 15, 15, 20, 15, 15, 15],
+                                        [15, 15, 15, 15, 15, 15, 20, 15, 15],
+                                        [15, 15, 15, 15, 15, 15, 15, 20, 15],
+                                        [15, 15, 15, 15, 15, 15, 15, 15, 20]])
         }
         
         # Datos de curvas ROC y AUC precalculados para cada modelo
@@ -233,12 +233,19 @@ def load_models_and_confusion_matrices():
 
 # Función para calcular el coeficiente de Matthews
 def calculate_mcc(conf_matrix):
+    """Calcula el MCC correctamente a partir de una matriz de confusión."""
+    conf_matrix = np.array(conf_matrix, dtype=int)  # Asegurar que es entera
+    n_classes = conf_matrix.shape[0]
+    
+    # Generar y_true y y_pred a partir de la matriz de confusión
     y_true = []
     y_pred = []
-    for i in range(len(conf_matrix)):
-        for j in range(len(conf_matrix)):
-            y_true.extend([i] * conf_matrix[i][j])
-            y_pred.extend([j] * conf_matrix[i][j])
+    for i in range(n_classes):
+        for j in range(n_classes):
+            y_true.extend([i] * conf_matrix[i, j])  # Clase real
+            y_pred.extend([j] * conf_matrix[i, j])  # Clase predicha
+    
+    # Calcular MCC usando sklearn (más robusto)
     return matthews_corrcoef(y_true, y_pred)
 
 # Función para realizar la prueba de McNemar
