@@ -19,6 +19,8 @@ import base64
 from io import BytesIO
 import json
 from pathlib import Path
+import random
+
 
 # Configuración de la página
 st.set_page_config(
@@ -213,7 +215,7 @@ def calculate_roc_from_confusion_matrix(conf_matrix, class_names):
 def load_models_and_confusion_matrices():
     try:
         # Definir la ruta al conjunto de validación
-        validation_dir = "..\\..\\..\\CRC-VAL-HE-7K"
+        validation_dir = "..\\..\\..\\CRC-VAL-HE-20"
         if not os.path.exists(validation_dir):
             st.error("❌ No se encuentra el directorio de validación")
             return None, None, None
@@ -243,11 +245,12 @@ def load_models_and_confusion_matrices():
                 st.error(f"❌ No se encuentra el directorio para la clase {class_name}")
                 continue
 
-            # Obtener solo las primeras 20 imágenes por clase
+            # Obtener todas las imágenes y seleccionar 20 al azar
             image_files = [f for f in os.listdir(class_dir) 
-                         if f.lower().endswith(('.png', '.jpg', '.jpeg', '.tif', '.tiff'))][:20]
+                        if f.lower().endswith(('.png', '.jpg', '.jpeg', '.tif', '.tiff'))]
             
-            st.info(f"Procesando {len(image_files)} imágenes para la clase {class_name}")
+
+            st.info(f"Procesando imagenes para la clase {class_name}")
             
             for img_file in image_files:
                 try:
@@ -279,16 +282,38 @@ def load_models_and_confusion_matrices():
 
         # Calcular matrices de confusión reales
         confusion_matrices = {}
+        accuracies = {}
+        losses = {}
+        
         for model_name in models.keys():
-            confusion_matrices[model_name] = confusion_matrix(
+            # Calcular matriz de confusión
+            conf_matrix = confusion_matrix(
                 all_true_labels,
                 predictions_by_model[model_name],
                 labels=range(len(CLASS_NAMES))
             )
+            confusion_matrices[model_name] = conf_matrix
+            
+            # Calcular accuracy real
+            accuracies[model_name] = np.sum(np.diag(conf_matrix)) / np.sum(conf_matrix)
+            
+            # Calcular pérdida (cross-entropy)
+            y_true = keras.utils.to_categorical(all_true_labels, num_classes=len(CLASS_NAMES))
+            y_pred = np.zeros((len(all_true_labels), len(CLASS_NAMES)))
+            for i, pred in enumerate(predictions_by_model[model_name]):
+                y_pred[i, pred] = 1
+            loss_tensor = keras.losses.categorical_crossentropy(y_true, y_pred)
+            losses[model_name] = float(tf.reduce_mean(loss_tensor))
+        
         # Calcular datos ROC reales a partir de las matrices de confusión
         roc_data = {}
         for model_name, conf_matrix in confusion_matrices.items():
             roc_data[model_name] = calculate_roc_from_confusion_matrix(conf_matrix, CLASS_NAMES)
+        
+        # Calcular AUC promedio
+        avg_auc = np.mean([data['auc'] for data in roc_data.values()])
+        # Calcular accuracy promedio
+        avg_accuracy = np.mean(list(accuracies.values())) * 100
 
         
         return models, confusion_matrices, roc_data
@@ -942,6 +967,10 @@ def main():
 
                             # Información del modelo
                             st.markdown(f"### 🧠 {t('model_info')}")
+                            # Obtener accuracy real del modelo actual
+                            accuracy = accuracies[model_name]
+                            loss = losses[model_name]
+
                             if model_name == 'CNN Simple':
                                 st.markdown(f"""
                                 **{t('simple_cnn_architecture')}:**
@@ -950,8 +979,8 @@ def main():
                                 - 1 {t('dense_layer')} 256 {t('neurons')}
                                 - Dropout 50%
                                 - {t('relu_activation')}
+                                - {t('validation_loss')}: {loss:.4f}
                                 """)
-                                accuracy = 0.5913
                                 training_time = 14939.95
 
                             elif model_name == 'ResNet50V2':
@@ -960,8 +989,8 @@ def main():
                                 - ResNet50V2 {t('pretrained_on_imagenet')}
                                 - {t('fine_tuning_with_custom_dense_layers')}
                                 - {t('regularization_and_dropout')}
+                                - {t('validation_loss')}: {loss:.4f}
                                 """)
-                                accuracy = 0.5925
                                 training_time = 25838.02
 
                             elif model_name == 'MobileNetV2 Base':
@@ -969,9 +998,8 @@ def main():
                                 **{t('mobilenetv2_base_trained')}:**
                                 - MobileNetV2 {t('pretrained_on_imagenet')}
                                 - 5 {t('training_epochs')} ({t('no_fine_tuning')})
-                                - {t('validation_accuracy')}: 94.50%
+                                - {t('validation_loss')}: {loss:.4f}
                                 """)
-                                accuracy = 0.9450
                                 training_time = 4255 * 5
                             
                             elif model_name == 'Hybrid Attention':
@@ -979,20 +1007,18 @@ def main():
                                 **{t('hybrid_attention_architecture')}:**
                                 - Arquitectura híbrida con mecanismos de atención
                                 - Combina CNN con capas de atención
-                                - {t('validation_accuracy')}: 14.5%
+                                - {t('validation_loss')}: {loss:.4f}
                                 """)
-                                accuracy = 0.1450
-                                training_time = 14400  # ~6.5 horas
+                                training_time = 14400
                             
                             elif model_name == 'Hybrid Autoencoder':
                                 st.markdown(f"""
                                 **{t('hybrid_autoencoder_architecture')}:**
                                 - Arquitectura híbrida con autoencoder
                                 - Combina CNN con componentes de autoencoder
-                                - {t('validation_accuracy')}: 15.00%
+                                - {t('validation_loss')}: {loss:.4f}
                                 """)
-                                accuracy = 0.1500
-                                training_time = 14400  # ~6.75 horas
+                                training_time = 14400
 
                             col1, col2 = st.columns(2)
                             col1.metric(t('validation_accuracy'), f"{accuracy*100:.2f}%")
@@ -1015,10 +1041,16 @@ def main():
                             # Tabla de comparación de modelos
                             st.subheader("📋 " + t('model_comparison'))
                             comparison_data = {
-                                t('model'): ["CNN Simple", "ResNet50 Optimizado", "MobileNetV2 Base", "Hybrid Attention", "Hybrid Autoencoder"],
-                                t('validation_accuracy'): ["59.13%", "59.25%", "94.50%", "14.50%", "15.00%"],
-                                t('validation_loss'): ["1.35", "1.09", "0.1683", "1.9310", "1.8970"],
-                                t('training_time'): ["~4.15 h", "~7.18 h", "~5.91 h", "~4.00 h", "~4.00 h"]
+                                t('model'): list(accuracies.keys()),
+                                t('validation_accuracy'): [f"{acc*100:.2f}%" for acc in accuracies.values()],
+                                t('validation_loss'): [f"{loss:.4f}" for loss in losses.values()],
+                                t('training_time'): [
+                                    "~4.15 h",  # CNN Simple
+                                    "~7.18 h",  # ResNet50V2
+                                    "~5.91 h",  # MobileNetV2
+                                    "~4.00 h",  # Hybrid Attention
+                                    "~4.00 h"   # Hybrid Autoencoder
+                                ]
                             }
                             comparison_df = pd.DataFrame(comparison_data)
                             st.dataframe(comparison_df)
