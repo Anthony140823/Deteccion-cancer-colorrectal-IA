@@ -1,4 +1,4 @@
-# app2.py - Aplicación Streamlit para diagnóstico de cáncer colon-rectal con soporte multilenguaje
+# app.py - Aplicación Streamlit para diagnóstico de cáncer colon-rectal con soporte multilenguaje
 import streamlit as st
 import tensorflow as tf
 import numpy as np
@@ -19,8 +19,6 @@ import base64
 from io import BytesIO
 import json
 from pathlib import Path
-import random
-
 
 # Configuración de la página
 st.set_page_config(
@@ -210,24 +208,10 @@ def calculate_roc_from_confusion_matrix(conf_matrix, class_names):
             'auc': 0.5
         }
 
-# Cargar modelos y calcular matrices de confusión con datos reales
+# Cargar modelos y matrices de confusión
 @st.cache_resource
 def load_models_and_confusion_matrices():
     try:
-        # Definir la ruta al conjunto de validación
-        validation_dir = os.path.join(os.path.dirname(__file__), "validation_data", "CRC-VAL-HE-20")
-        # Ruta alternativa si no existe
-        alt_validation_dir = "..\\..\\..\\CRC-VAL-HE-20"
-        
-        if os.path.exists(validation_dir):
-            validation_dir = validation_dir
-        elif os.path.exists(alt_validation_dir):
-            validation_dir = alt_validation_dir
-        else:
-            st.warning("⚠️ No se encuentra el directorio de validación. Usando matrices de confusión predefinidas.")
-            return load_mock_data()
-
-        # Cargar modelos
         models = {
             'CNN Simple': keras.models.load_model('models/cnn_simple_model.h5'),
             'ResNet50V2': keras.layers.TFSMLayer(
@@ -238,95 +222,70 @@ def load_models_and_confusion_matrices():
             'Hybrid Attention': keras.models.load_model('models/Fast_HybridAttention_final.h5'),
             'Hybrid Autoencoder': keras.models.load_model('models/Fast_HybridAutoencoder_final.h5')
         }
-
-        # Preparar listas para almacenar predicciones y etiquetas reales
-        all_true_labels = []
-        predictions_by_model = {model_name: [] for model_name in models.keys()}
-
-        # Procesar imágenes de validación
-        st.info("⏳ Calculando matrices de confusión con datos reales...")
         
-        for class_idx, class_name in enumerate(CLASS_NAMES):
-            class_dir = os.path.join(validation_dir, class_name)
-            if not os.path.exists(class_dir):
-                st.error(f"❌ No se encuentra el directorio para la clase {class_name}")
-                continue
+        # Matrices de confusión precalculadas
+        confusion_matrices = {
+            'CNN Simple': np.array([[ 19,   1,   0,   0,   0,   0,   0,   0,   0],
+                                  [  0,  20,   0,   0,   0,   0,   0,   0,   0],
+                                  [  0,  14,   2,   0,   0,   4,   0,   0,   0],
+                                  [  0,   0,   1,  18,   0,   0,   1,   0,   0],
+                                  [  3,   0,   0,   0,   3,   1,   3,   0,  10],
+                                  [  0,   0,   2,   0,   0,  17,   0,   0,   1],
+                                  [  0,   0,   0,   0,   6,   8,   4,   1,   1],
+                                  [  0,   0,   0,   0,   0,  12,   2,   1,   5],
+                                  [  0,   2,   0,   0,   1,  16,   0,   0,   1]]),
 
-            # Obtener todas las imágenes y seleccionar 20 al azar
-            image_files = [f for f in os.listdir(class_dir) 
-                        if f.lower().endswith(('.png', '.jpg', '.jpeg', '.tif', '.tiff'))]
-            
+            'ResNet50V2': np.array([[  0,   0,   7,   0,   1,   1,   9,   2,   0],
+                                   [  0,   0,   6,   0,   0,   8,   4,   2,   0],
+                                   [  3,   0,   1,   3,   1,   7,   2,   3,   0],
+                                   [  0,   0,   0,   0,  12,   0,   8,   0,   0],
+                                   [  0,   0,   2,   0,   0,   5,  11,   2,   0],
+                                   [  0,   0,   0,   1,   1,   4,   9,   5,   0],
+                                   [  1,   0,   1,   0,   1,  12,   5,   0,   0],
+                                   [  0,   0,   1,   2,   2,   4,   9,   2,   0],
+                                   [  0,   0,   2,   1,   2,   7,   7,   1,   0]]),
 
-            st.info(f"Procesando imagenes para la clase {class_name}")
-            
-            for img_file in image_files:
-                try:
-                    img_path = os.path.join(class_dir, img_file)
-                    img = Image.open(img_path)
-                    
-                    # Preprocesar imagen para cada tipo de modelo
-                    img_224 = preprocess_image(img, None)  # Para modelos que usan 224x224
-                    img_96 = preprocess_image(img, 'Hybrid Attention')  # Para modelos que usan 96x96
-                    
-                    if img_224 is not None and img_96 is not None:
-                        all_true_labels.append(class_idx)
-                        
-                        # Obtener predicciones de cada modelo
-                        for model_name, model in models.items():
-                            if model_name in ['Hybrid Attention', 'Hybrid Autoencoder']:
-                                pred = model.predict(img_96, verbose=0)
-                            elif model_name == 'ResNet50V2':
-                                outputs = model(img_224, training=False)
-                                pred = list(outputs.values())[0].numpy()
-                            else:
-                                pred = model.predict(img_224, verbose=0)
-                            
-                            predictions_by_model[model_name].append(np.argmax(pred[0]))
-                            
-                except Exception as e:
-                    st.warning(f"No se pudo procesar {img_file}: {str(e)}")
-                    continue
+            'MobileNetV2 Base': np.array([[ 20,   0,   0,   0,   0,   0,   0,   0,   0],
+                                        [  0,  20,   0,   0,   0,   0,   0,   0,   0],
+                                        [  0,   0,  17,   0,   0,   3,   0,   0,   0],
+                                        [  0,   0,   0,  19,   0,   1,   0,   0,   0],
+                                        [  3,   0,   0,   0,  17,   0,   0,   0,   0],
+                                        [  0,   0,   0,   1,   0,  17,   0,   2,   0],
+                                        [  0,   0,   0,   1,   0,   0,  19,   0,   0],
+                                        [  0,   0,   0,   0,   0,   5,   0,  14,   1],
+                                        [  0,   0,   0,   0,   0,   0,   3,   0,  17]]),
 
-        # Calcular matrices de confusión reales
-        confusion_matrices = {}
-        accuracies = {}
-        losses = {}
-        
-        for model_name in models.keys():
-            # Calcular matriz de confusión
-            conf_matrix = confusion_matrix(
-                all_true_labels,
-                predictions_by_model[model_name],
-                labels=range(len(CLASS_NAMES))
-            )
-            confusion_matrices[model_name] = conf_matrix
-            
-            # Calcular accuracy real
-            accuracies[model_name] = np.sum(np.diag(conf_matrix)) / np.sum(conf_matrix)
-            
-            # Calcular pérdida (cross-entropy)
-            y_true = keras.utils.to_categorical(all_true_labels, num_classes=len(CLASS_NAMES))
-            y_pred = np.zeros((len(all_true_labels), len(CLASS_NAMES)))
-            for i, pred in enumerate(predictions_by_model[model_name]):
-                y_pred[i, pred] = 1
-            loss_tensor = keras.losses.categorical_crossentropy(y_true, y_pred)
-            losses[model_name] = float(tf.reduce_mean(loss_tensor))
+            'Hybrid Attention': np.array([[  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                        [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                        [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                        [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                        [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                        [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                        [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                        [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                        [  0,   0,   0,   0,   0,   0,   0,   0,  20]]),
+
+            'Hybrid Autoencoder': np.array([[  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                          [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                          [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                          [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                          [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                          [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                          [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                          [  0,   0,   0,   0,   0,   0,   0,   0,  20],
+                                          [  0,   0,   0,   0,   0,   0,   0,   0,  20]])
+        }
         
         # Calcular datos ROC reales a partir de las matrices de confusión
         roc_data = {}
         for model_name, conf_matrix in confusion_matrices.items():
             roc_data[model_name] = calculate_roc_from_confusion_matrix(conf_matrix, CLASS_NAMES)
-        
-        # Calcular AUC promedio
-        avg_auc = np.mean([data['auc'] for data in roc_data.values()])
-        # Calcular accuracy promedio
-        avg_accuracy = np.mean(list(accuracies.values())) * 100
 
         
-        return models, confusion_matrices, roc_data, accuracies, losses
+        return models, confusion_matrices, roc_data
     except Exception as e:
         st.error(f"❌ Error loading models or confusion matrices: {str(e)}")
-        return None, None, None, None, None
+        return None, None, None
     
 
 # Función para calcular el coeficiente de Matthews
@@ -795,11 +754,11 @@ def main():
     st.title(t('title'))
     st.markdown(t('description'))
     
-    # Cargar modelos y métricas
-    models, confusion_matrices, roc_data, accuracies, losses = load_models_and_confusion_matrices()
+    # Cargar modelos
+    models, confusion_matrices, roc_data = load_models_and_confusion_matrices()
     
     # Calcular métricas estadísticas
-    if models and confusion_matrices and accuracies and losses:
+    if models and confusion_matrices:
         mcc_results = {}
         for model_name, conf_matrix in confusion_matrices.items():
             mcc_results[model_name] = calculate_mcc(conf_matrix)
@@ -817,16 +776,11 @@ def main():
     )
 
     if uploaded_file is not None:
-        # Validar tamaño del archivo (máximo 10MB)
-        if uploaded_file.size > 10 * 1024 * 1024:
-            st.error("❌ El archivo es demasiado grande. Máximo 10MB permitido.")
-            return
-            
         try:
             image = Image.open(uploaded_file)
             st.image(image, caption=t('uploaded_image'), use_column_width=True)
 
-            if models and confusion_matrices and roc_data and accuracies and losses:
+            if models and confusion_matrices and roc_data:
                 model_name = st.selectbox(t('model_select'), list(models.keys()))
                 model = models[model_name]
 
@@ -835,7 +789,7 @@ def main():
                         processed_image = preprocess_image(image, model_name=model_name)
 
                         if processed_image is not None:
-                            if model_name == 'ResNet50V2':
+                            if model_name in ['RaeaesNet50V2']:
                                 outputs = model(processed_image, training=False)
                                 prediction = list(outputs.values())[0].numpy() if isinstance(outputs, dict) else outputs.numpy()
                             else:
@@ -921,9 +875,9 @@ def main():
                             # Dibujar todas las curvas ROC
                             for model_name_roc, data in roc_data.items():
                                 ax_roc_all.plot(data['fpr'], 
-                                                data['tpr'], 
-                                                lw=2,
-                                                label=f'{model_name_roc} (AUC = {data["auc"]:.2f})')
+                                              data['tpr'], 
+                                              lw=2,
+                                              label=f'{model_name_roc} (AUC = {data["auc"]:.2f})')
                             
                             # Línea de referencia
                             ax_roc_all.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
@@ -979,10 +933,6 @@ def main():
 
                             # Información del modelo
                             st.markdown(f"### 🧠 {t('model_info')}")
-                            # Obtener accuracy real del modelo actual
-                            accuracy = accuracies[model_name]
-                            loss = losses[model_name]
-
                             if model_name == 'CNN Simple':
                                 st.markdown(f"""
                                 **{t('simple_cnn_architecture')}:**
@@ -991,8 +941,8 @@ def main():
                                 - 1 {t('dense_layer')} 256 {t('neurons')}
                                 - Dropout 50%
                                 - {t('relu_activation')}
-                                - {t('validation_loss')}: {loss:.4f}
                                 """)
+                                accuracy = 0.5913
                                 training_time = 14939.95
 
                             elif model_name == 'ResNet50V2':
@@ -1001,8 +951,8 @@ def main():
                                 - ResNet50V2 {t('pretrained_on_imagenet')}
                                 - {t('fine_tuning_with_custom_dense_layers')}
                                 - {t('regularization_and_dropout')}
-                                - {t('validation_loss')}: {loss:.4f}
                                 """)
+                                accuracy = 0.5925
                                 training_time = 25838.02
 
                             elif model_name == 'MobileNetV2 Base':
@@ -1010,8 +960,9 @@ def main():
                                 **{t('mobilenetv2_base_trained')}:**
                                 - MobileNetV2 {t('pretrained_on_imagenet')}
                                 - 5 {t('training_epochs')} ({t('no_fine_tuning')})
-                                - {t('validation_loss')}: {loss:.4f}
+                                - {t('validation_accuracy')}: 94.50%
                                 """)
+                                accuracy = 0.9450
                                 training_time = 4255 * 5
                             
                             elif model_name == 'Hybrid Attention':
@@ -1019,18 +970,20 @@ def main():
                                 **{t('hybrid_attention_architecture')}:**
                                 - Arquitectura híbrida con mecanismos de atención
                                 - Combina CNN con capas de atención
-                                - {t('validation_loss')}: {loss:.4f}
+                                - {t('validation_accuracy')}: 14.5%
                                 """)
-                                training_time = 14400
+                                accuracy = 0.1450
+                                training_time = 14400  # ~6.5 horas
                             
                             elif model_name == 'Hybrid Autoencoder':
                                 st.markdown(f"""
                                 **{t('hybrid_autoencoder_architecture')}:**
                                 - Arquitectura híbrida con autoencoder
                                 - Combina CNN con componentes de autoencoder
-                                - {t('validation_loss')}: {loss:.4f}
+                                - {t('validation_accuracy')}: 15.00%
                                 """)
-                                training_time = 14400
+                                accuracy = 0.1500
+                                training_time = 14400  # ~6.75 horas
 
                             col1, col2 = st.columns(2)
                             col1.metric(t('validation_accuracy'), f"{accuracy*100:.2f}%")
@@ -1053,16 +1006,10 @@ def main():
                             # Tabla de comparación de modelos
                             st.subheader("📋 " + t('model_comparison'))
                             comparison_data = {
-                                t('model'): list(accuracies.keys()),
-                                t('validation_accuracy'): [f"{acc*100:.2f}%" for acc in accuracies.values()],
-                                t('validation_loss'): [f"{loss:.4f}" for loss in losses.values()],
-                                t('training_time'): [
-                                    "~4.15 h",  # CNN Simple
-                                    "~7.18 h",  # ResNet50V2
-                                    "~5.91 h",  # MobileNetV2
-                                    "~4.00 h",  # Hybrid Attention
-                                    "~4.00 h"   # Hybrid Autoencoder
-                                ]
+                                t('model'): ["CNN Simple", "ResNet50 Optimizado", "MobileNetV2 Base", "Hybrid Attention", "Hybrid Autoencoder"],
+                                t('validation_accuracy'): ["59.13%", "59.25%", "94.50%", "14.50%", "15.00%"],
+                                t('validation_loss'): ["1.35", "1.09", "0.1683", "1.9310", "1.8970"],
+                                t('training_time'): ["~4.15 h", "~7.18 h", "~5.91 h", "~4.00 h", "~4.00 h"]
                             }
                             comparison_df = pd.DataFrame(comparison_data)
                             st.dataframe(comparison_df)
