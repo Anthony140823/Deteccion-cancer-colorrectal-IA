@@ -835,8 +835,8 @@ def main():
                             # Mostrar matriz de confusión
                             st.subheader("📊 " + t('confusion_matrix'))
                             st.markdown(f"{t('confusion_matrix')} {model_name} ({t('validation_data')})")
-                            st.markdown(t('waring_data'))
-                            st.markdown(t('waring_matrix'))
+                            st.warning(t('waring_data'))
+                            st.warning(t('waring_matrix'))
                             
                             fig2, ax2 = plt.subplots(figsize=(10, 8))
                             sns.heatmap(confusion_matrices[model_name], 
