@@ -48,6 +48,8 @@ class TranslationService:
                 'training_results': 'Training Results',
                 'statistical_analysis': 'Statistical Analysis',
                 'class_probabilities': 'Class Probabilities',
+                'waring_data':'Los datos de esta sección no varian, corresponden a las metricas de precision, perdida y tiempo obtenidos de google colab',
+                'waring_matrix':'Esta es una matriz objetivo, es decir, como debería de verse para el modelo. Puedes generar una validacion en app2.py',
                 'confusion_matrix': 'Confusion Matrix',
                 'model_comparison': 'Model Comparison',
                 'mcc': 'Matthews Correlation Coefficient',
@@ -82,6 +84,8 @@ class TranslationService:
                 'training_results': 'Resultados de Entrenamiento',
                 'statistical_analysis': 'Análisis Estadístico',
                 'class_probabilities': 'Probabilidades por Clase',
+                'waring_data':'Los datos de esta sección no varian, corresponden a las metricas de precision, perdida y tiempo obtenidos de google colab',
+                'waring_matrix':'Esta es una matriz objetivo, es decir, como debería de verse para el modelo. Puedes generar una validacion en app2.py',
                 'confusion_matrix': 'Matriz de Confusión',
                 'model_comparison': 'Comparación de Modelos',
                 'mcc': 'Coeficiente de Correlación de Matthews',
@@ -803,7 +807,7 @@ def main():
                             **{t('diagnosis')}:** {class_description} ({predicted_class})  
                             **{t('confidence')}:** {confidence:.2f}%
                             """)
-
+                            
                             # Tabla de probabilidades
                             st.subheader("📊 " + t('class_probabilities'))
                             prob_df = pd.DataFrame({
@@ -818,6 +822,7 @@ def main():
                                 use_container_width=True
                             )
 
+
                             # Gráfico de probabilidades
                             st.subheader("📈 " + t('class_probabilities'))
                             fig1, ax1 = plt.subplots(figsize=(10, 5))
@@ -830,6 +835,8 @@ def main():
                             # Mostrar matriz de confusión
                             st.subheader("📊 " + t('confusion_matrix'))
                             st.markdown(f"{t('confusion_matrix')} {model_name} ({t('validation_data')})")
+                            st.warning(t('waring_data'))
+                            st.warning(t('waring_matrix'))
                             
                             fig2, ax2 = plt.subplots(figsize=(10, 8))
                             sns.heatmap(confusion_matrices[model_name], 
