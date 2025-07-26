@@ -25,7 +25,6 @@ st.set_page_config(
     page_title="Colorectal Cancer Diagnosis",
     layout="wide"
 )
-
 # Sistema de traducción
 class TranslationService:
     def __init__(self):
@@ -830,7 +829,7 @@ def main():
                             # Mostrar matriz de confusión
                             st.subheader("📊 " + t('confusion_matrix'))
                             st.markdown(f"{t('confusion_matrix')} {model_name} ({t('validation_data')})")
-                            
+                            st.warning('Matriz de confusion es objetivo')
                             fig2, ax2 = plt.subplots(figsize=(10, 8))
                             sns.heatmap(confusion_matrices[model_name], 
                                         annot=True, 
