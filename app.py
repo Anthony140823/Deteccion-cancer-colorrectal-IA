@@ -318,7 +318,7 @@ def perform_mcnemar_test(conf_matrix1, conf_matrix2):
     
     b = max(0, b)
     c = max(0, c)
-    
+     
     chi2_stat = (abs(b - c) - 1)**2 / (b + c) if (b + c) > 0 else 0
     p_value = 1 - chi2.cdf(chi2_stat, 1)
     
