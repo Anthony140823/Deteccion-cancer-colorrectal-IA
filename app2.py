@@ -921,9 +921,9 @@ def main():
                             # Dibujar todas las curvas ROC
                             for model_name_roc, data in roc_data.items():
                                 ax_roc_all.plot(data['fpr'], 
-                                              data['tpr'], 
-                                              lw=2,
-                                              label=f'{model_name_roc} (AUC = {data["auc"]:.2f})')
+                                                data['tpr'], 
+                                                lw=2,
+                                                label=f'{model_name_roc} (AUC = {data["auc"]:.2f})')
                             
                             # Línea de referencia
                             ax_roc_all.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
