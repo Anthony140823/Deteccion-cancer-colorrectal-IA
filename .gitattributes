@@ -1,0 +1,4 @@
+*.h5 filter=lfs diff=lfs merge=lfs -text
+*.data-* filter=lfs diff=lfs merge=lfs -text
+models/cnn_simple_model.h5 filter=lfs diff=lfs merge=lfs -text
+models/resnet50_model/variables/variables.data-00000-of-00001 filter=lfs diff=lfs merge=lfs -text
