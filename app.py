@@ -222,9 +222,9 @@ def load_models_and_confusion_matrices():
         
         # Cargar modelos
         models = {
-            #'CNN Simple': keras.models.load_model('models/cnn_simple_model.h5'),
+            'CNN Simple': keras.models.load_model('models/cnn_simple_model.h5'),
             'ResNet50V2': keras.models.load_model('models/resnet50.keras'),
-            'MobileNetV2 Base': keras.models.load_model('models/mobilenetv2_base_only.h5'),
+            #'MobileNetV2 Base': keras.models.load_model('models/mobilenetv2_base_only.h5'),
             'Hybrid Attention': keras.models.load_model('models/Fast_HybridAttention_final.h5'),
             'Hybrid Autoencoder': keras.models.load_model('models/Fast_HybridAutoencoder_final.h5')
         }
