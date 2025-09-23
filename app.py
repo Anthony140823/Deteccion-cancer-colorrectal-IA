@@ -228,111 +228,113 @@ def load_models_and_confusion_matrices():
             'Hybrid Attention': keras.models.load_model('models/Fast_HybridAttention_final.h5'),
             'Hybrid Autoencoder': keras.models.load_model('models/Fast_HybridAutoencoder_final.h5')
         }
-
-        # Matrices de confusión predefinidas con datos actualizados
-        # Matriz precalculada; accuracies y loss basada en entrenamiento previo
-        predefined_data = {
-            "CNN Simple": {
-                "confusion_matrix": [
-                    [1309, 12, 6,   0,  9,   2,  0, 0, 0],
-                    [0,   814, 4,   0,  0,  22,  0, 0, 7],
-                    [5,   158, 25,  0,  0, 146,  1, 4, 0],
-                    [1,    0,  25, 583,  3,  0,  22, 0, 0],
-                    [218, 21,  9,   0,  226, 53, 16, 1,  491],
-                    [0,   13,  97,  0,  0,  477,  1, 2,   2],
-                    [10,  14,  46,  30, 201, 281, 97, 41, 21],
-                    [0,   10,  28,  1,  22,  261, 30, 3,  66],
-                    [9,   69,  35,  0,  43,  968, 19, 33, 52]
-                ],
-                "accuracy": 0.5913,  # 59.13%
-                "loss": 1.35
-            },
-            "ResNet50V2": {
-                "confusion_matrix": [
-                    [1178, 50,  0,  1, 38,  42, 20, 0, 9],
-                    [40, 800,   1,  0, 0,   5,  1,  0, 0],
-                    [4, 0,   110, 33,  4,  10,  3, 16,  159],
-                    [0, 0,    9,  578, 0,   1, 37,  0, 9],
-                    [91, 3,  96,   1,  17, 615, 3, 78, 131],
-                    [6,  0,  45,   1,  5,  255, 7, 19, 254],
-                    [1, 1,   20,  37,  35, 19, 389, 0, 239],
-                    [0,  4,  76,  16,  6,  105, 17, 22, 175],
-                    [28, 6,  37,  7,  107, 105, 174, 17, 752]
-                ],
-                "accuracy": 0.5854,  # 59.25%
-                "loss": 1.0915
-            },
-            "MobileNetV2 Base": {
-                "confusion_matrix": [
-                    [1295, 2, 3,  4,  5, 28,  0,   0,  1],
-                    [2,  845, 0,  0,  0, 0,   0,   0,  0],
-                    [0,   1, 299, 2,  0, 34,  0,   0,  3],
-                    [0,   0, 14, 616, 0,  1,  2,   0,  1],
-                    [18, 19, 5,   0, 933, 15, 5,  37,  3],
-                    [0,   0, 2,  10, 4, 449,  0, 126,  1],
-                    [0,   0, 0,  11, 2,  2, 699,   2, 25],
-                    [0,   0, 4,   1, 8,  94,  2, 299, 13],
-                    [0,   0, 15, 18, 13, 10, 31,  15, 1131]
-                ],
-                "accuracy": 0.9450,  # 94.50%
-                "loss": 0.1683
-            },
-            "Hybrid Attention": {
-                "confusion_matrix": [
-                    [0, 0, 0, 0, 0, 0, 0, 0, 1338],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 847],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 339],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 634],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 1035],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 592],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 741],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 421],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 1233]
-                ],
-                "accuracy": 0.1450,  # 14.50%
-                "loss": 1.9310
-            },
-            "Hybrid Autoencoder": {
-                "confusion_matrix": [
-                    [0, 0, 0, 0, 0, 0, 0, 0, 1338],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 847],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 339],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 634],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 1035],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 592],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 741],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 421],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 1233]
-                ],
-                "accuracy": 0.1500,  # 15.00%
-                "loss": 1.8970
-            }
-        }
-        
-        # Extraer matrices de confusión y accuracies
-        confusion_matrices = {}
-        accuracies = {}
-        losses = {}
-        
-        for model_name in models.keys():
-            confusion_matrices[model_name] = np.array(predefined_data[model_name]["confusion_matrix"])
-            accuracies[model_name] = predefined_data[model_name]["accuracy"]
-            
-            # Usar pérdida real de los datos proporcionados
-            losses[model_name] = predefined_data[model_name]["loss"]
-        
-        # Calcular datos ROC a partir de las matrices de confusión predefinidas
-        roc_data = {}
-        for model_name, conf_matrix in confusion_matrices.items():
-            roc_data[model_name] = calculate_roc_from_confusion_matrix(conf_matrix, CLASS_NAMES)
-        
-        st.success("✅ Modelos y matrices de confusión cargados exitosamente!")
-        return models, confusion_matrices, roc_data, accuracies, losses
-        
     except Exception as e:
-        st.error(f"❌ Error loading models or confusion matrices: {str(e)}")
+        st.error(f"❌ Error cargando modelos: {str(e)}")
         return None, None, None, None, None
-    
+    #     # Matrices de confusión predefinidas con datos actualizados
+    #     # Matriz precalculada; accuracies y loss basada en entrenamiento previo
+    #     predefined_data = {
+    #         "CNN Simple": {
+    #             "confusion_matrix": [
+    #                 [1309, 12, 6,   0,  9,   2,  0, 0, 0],
+    #                 [0,   814, 4,   0,  0,  22,  0, 0, 7],
+    #                 [5,   158, 25,  0,  0, 146,  1, 4, 0],
+    #                 [1,    0,  25, 583,  3,  0,  22, 0, 0],
+    #                 [218, 21,  9,   0,  226, 53, 16, 1,  491],
+    #                 [0,   13,  97,  0,  0,  477,  1, 2,   2],
+    #                 [10,  14,  46,  30, 201, 281, 97, 41, 21],
+    #                 [0,   10,  28,  1,  22,  261, 30, 3,  66],
+    #                 [9,   69,  35,  0,  43,  968, 19, 33, 52]
+    #             ],
+    #             "accuracy": 0.5913,  # 59.13%
+    #             "loss": 1.35
+    #         },
+    #         "ResNet50V2": {
+    #             "confusion_matrix": [
+    #                 [1178, 50,  0,  1, 38,  42, 20, 0, 9],
+    #                 [40, 800,   1,  0, 0,   5,  1,  0, 0],
+    #                 [4, 0,   110, 33,  4,  10,  3, 16,  159],
+    #                 [0, 0,    9,  578, 0,   1, 37,  0, 9],
+    #                 [91, 3,  96,   1,  17, 615, 3, 78, 131],
+    #                 [6,  0,  45,   1,  5,  255, 7, 19, 254],
+    #                 [1, 1,   20,  37,  35, 19, 389, 0, 239],
+    #                 [0,  4,  76,  16,  6,  105, 17, 22, 175],
+    #                 [28, 6,  37,  7,  107, 105, 174, 17, 752]
+    #             ],
+    #             "accuracy": 0.5854,  # 59.25%
+    #             "loss": 1.0915
+    #         },
+    #         "MobileNetV2 Base": {
+    #             "confusion_matrix": [
+    #                 [1295, 2, 3,  4,  5, 28,  0,   0,  1],
+    #                 [2,  845, 0,  0,  0, 0,   0,   0,  0],
+    #                 [0,   1, 299, 2,  0, 34,  0,   0,  3],
+    #                 [0,   0, 14, 616, 0,  1,  2,   0,  1],
+    #                 [18, 19, 5,   0, 933, 15, 5,  37,  3],
+    #                 [0,   0, 2,  10, 4, 449,  0, 126,  1],
+    #                 [0,   0, 0,  11, 2,  2, 699,   2, 25],
+    #                 [0,   0, 4,   1, 8,  94,  2, 299, 13],
+    #                 [0,   0, 15, 18, 13, 10, 31,  15, 1131]
+    #             ],
+    #             "accuracy": 0.9450,  # 94.50%
+    #             "loss": 0.1683
+    #         },
+    #         "Hybrid Attention": {
+    #             "confusion_matrix": [
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 1338],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 847],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 339],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 634],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 1035],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 592],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 741],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 421],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 1233]
+    #             ],
+    #             "accuracy": 0.1450,  # 14.50%
+    #             "loss": 1.9310
+    #         },
+    #         "Hybrid Autoencoder": {
+    #             "confusion_matrix": [
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 1338],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 847],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 339],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 634],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 1035],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 592],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 741],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 421],
+    #                 [0, 0, 0, 0, 0, 0, 0, 0, 1233]
+    #             ],
+    #             "accuracy": 0.1500,  # 15.00%
+    #             "loss": 1.8970
+    #         }
+    #     }
+        
+    #     # Extraer matrices de confusión y accuracies
+    #     confusion_matrices = {}
+    #     accuracies = {}
+    #     losses = {}
+        
+    #     for model_name in models.keys():
+    #         confusion_matrices[model_name] = np.array(predefined_data[model_name]["confusion_matrix"])
+    #         accuracies[model_name] = predefined_data[model_name]["accuracy"]
+            
+    #         # Usar pérdida real de los datos proporcionados
+    #         losses[model_name] = predefined_data[model_name]["loss"]
+        
+    #     # Calcular datos ROC a partir de las matrices de confusión predefinidas
+    #     roc_data = {}
+    #     for model_name, conf_matrix in confusion_matrices.items():
+    #         roc_data[model_name] = calculate_roc_from_confusion_matrix(conf_matrix, CLASS_NAMES)
+        
+    #     st.success("✅ Modelos y matrices de confusión cargados exitosamente!")
+    #     return models, confusion_matrices, roc_data, accuracies, losses
+        
+    # except Exception as e:
+    #     st.error(f"❌ Error loading models or confusion matrices: {str(e)}")
+    #     return None, None, None, None, None
+     
 
 # Función para calcular el coeficiente de Matthews
 def calculate_mcc(conf_matrix):
