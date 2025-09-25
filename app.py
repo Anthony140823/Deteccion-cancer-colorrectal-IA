@@ -39,6 +39,7 @@ class TranslationService:
             'en': {
                 'title': '🩺 Colorectal Cancer Diagnosis System',
                 'description': 'This application uses deep learning models trained on Google Colab to analyze colorectal tissue images.',
+                'load-models': '⏳ Loading predefined models and confusion matrices...',
                 'upload_prompt': 'Upload a colorectal tissue image (JPEG, PNG)',
                 'analyze_button': '🚀 Perform diagnosis',
                 'analyzing': '🔬 Analyzing image...',
@@ -75,6 +76,7 @@ class TranslationService:
             'es': {
                 'title': '🩺 Sistema de Diagnóstico de Cáncer colon-rectal',
                 'description': 'Esta aplicación utiliza modelos de deep learning entrenados en Google Colab para analizar imágenes de tejido colon-rectal.',
+                'carga-modelos': '⏳ Cargando modelos y matrices de confusión predefinidas...',
                 'upload_prompt': 'Suba una imagen de tejido colon-rectal (JPEG, PNG)',
                 'analyze_button': '🚀 Realizar diagnóstico',
                 'analyzing': '🔬 Analizando imagen...',
@@ -218,7 +220,7 @@ def calculate_roc_from_confusion_matrix(conf_matrix, class_names):
 @st.cache_resource
 def load_models_and_confusion_matrices():
     try:
-        st.info("⏳ Cargando modelos y matrices de confusión predefinidas...")
+        st.info('⏳ Cargando modelos y matrices de confusión predefinidas...')
         
         # Cargar modelos
         models = {
@@ -332,6 +334,7 @@ def load_models_and_confusion_matrices():
     except Exception as e:
         st.error(f"❌ Error loading models or confusion matrices: {str(e)}")
         return None, None, None, None, None
+    
 
 # Función para calcular el coeficiente de Matthews
 def calculate_mcc(conf_matrix):
@@ -820,6 +823,7 @@ def main():
         type=["jpg", "jpeg", "png"]
     )
 
+
     if uploaded_file is not None:
         # Validar tamaño del archivo (máximo 10MB)
         if uploaded_file.size > 10 * 1024 * 1024:
@@ -1103,6 +1107,7 @@ def main():
                 st.warning("⚠️ " + t('error_loading_models'))
         except Exception as e:
             st.error(f"{t('error_processing_image')}: {str(e)}")
+            
 
     # Sidebar con info del dataset
     st.sidebar.markdown("---")
@@ -1112,7 +1117,9 @@ def main():
 - 9 clases histológicas
 - Resolución: 224×224 píxeles
 
-El codigo utilizado para entrenar los modelos se encuentra en Google colab (https://colab.research.google.com/drive/1jsgGq9226_Uhnj0ZtFHIWjZolRxmxmG7?usp=sharing)
+Se utilizo Google colab (https://colab.research.google.com/drive/1jsgGq9226_Uhnj0ZtFHIWjZolRxmxmG7?usp=sharing)
+                        
+Imagenes para demostracion (https://drive.google.com/drive/folders/1iFInM3XTnnizjwT36Yb1m1s3nCEae9ET?usp=sharing)
                     
 Este proyecto a sido subido a GitHub, el cual se encuentra en este enlace: (https://github.com/Anthony140823/Deteccion-cancer-colorrectal-IA.git)
 """)
