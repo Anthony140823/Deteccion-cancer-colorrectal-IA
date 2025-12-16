@@ -16,3 +16,7 @@ Características técnicas:
 -	Windows 11 sistema 64bits
 -	Python 3.11.5
 -	Tensorﬂow 2
+
+
+
+https://deteccion-cancer-colorrectal-ia-fe8wywg5qxqxxnnaer6lnf.streamlit.app/
